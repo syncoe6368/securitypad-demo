@@ -302,6 +302,22 @@ export default function Home() {
           </a>
         </div>
       </section>
+
+      {/* Footer */}
+      <footer className="border-t border-border py-8 px-4">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2 text-sm text-muted">
+            <Shield className="w-4 h-4 text-info" />
+            <span>SecurityPad © {new Date().getFullYear()} Syncoe. All rights reserved.</span>
+          </div>
+          <div className="flex items-center gap-6 text-sm">
+            <a href="/terms/" className="text-muted hover:text-text transition-colors">Terms</a>
+            <a href="/privacy/" className="text-muted hover:text-text transition-colors">Privacy</a>
+            <a href="/login/" className="text-info hover:text-info/80 font-medium transition-colors">Sign In</a>
+            <a href="/checkout/" className="bg-info/10 text-info px-3 py-1 rounded-lg font-medium hover:bg-info/20 transition-colors">Upgrade</a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
