@@ -122,6 +122,7 @@ function Footer() {
               <li><a href="/scan" className="text-text-muted text-sm hover:text-text">Scanner</a></li>
               <li><a href="/dashboard" className="text-text-muted text-sm hover:text-text">Dashboard</a></li>
               <li><a href="/pricing" className="text-text-muted text-sm hover:text-text">Pricing</a></li>
+              <li><a href="/login" className="text-text-muted text-sm hover:text-text">Sign In</a></li>
             </ul>
           </div>
           <div>
@@ -137,6 +138,7 @@ function Footer() {
             <ul className="space-y-2">
               <li><a href="/terms" className="text-text-muted text-sm hover:text-text">Terms</a></li>
               <li><a href="/privacy" className="text-text-muted text-sm hover:text-text">Privacy</a></li>
+              <li><a href="/checkout" className="text-text-muted text-sm hover:text-text">Upgrade</a></li>
               <li><a href="#" className="text-text-muted text-sm hover:text-text">Contact</a></li>
             </ul>
           </div>
