@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Shield, ClipboardList } from 'lucide-react';
+import { useState, useCallback, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, Shield, ClipboardList, Play, Loader2, Wifi, WifiOff } from 'lucide-react';
 import CodeEditor from '@/components/CodeEditor';
 import FindingsPanel from '@/components/FindingsPanel';
 import VulnerabilityDeepDive from '@/components/VulnerabilityDeepDive';
@@ -10,6 +10,8 @@ import AuditChecklist from '@/components/AuditChecklist';
 import ImmunefiReadiness from '@/components/ImmunefiReadiness';
 import { DEMO_CONTRACTS, DEMO_FINDINGS, DEMO_AUDIT_CHECKLIST, DEMO_IMMUNEFI_READINESS } from '@/lib/demo-data';
 import type { Finding } from '@/lib/store';
+import { api } from '@/lib/api';
+import type { ScanResult } from '@/lib/api';
 
 export default function ScanPage() {
   const [selectedContract, setSelectedContract] = useState(0);
@@ -17,16 +19,77 @@ export default function ScanPage() {
   const [highlightLine, setHighlightLine] = useState<number | undefined>();
   const [showSidebar, setShowSidebar] = useState(true);
   const [sidebarTab, setSidebarTab] = useState<'checklist' | 'immunefi'>('checklist');
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [apiMode, setApiMode] = useState<'demo' | 'live' | 'checking'>('checking');
+  const [liveFindings, setLiveFindings] = useState<Finding[]>([]);
+  const [liveScore, setLiveScore] = useState<number | null>(null);
+
+  // Check API availability on mount
+  useEffect(() => {
+    setApiMode('checking');
+    api.demoScan('').catch(() => {
+      // Health check — expect error, we just care if API is reachable
+    });
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/demo/health`, {
+      signal: AbortSignal.timeout(3000),
+    })
+      .then(res => setApiMode(res.ok ? 'live' : 'demo'))
+      .catch(() => setApiMode('demo'));
+  }, []);
 
   const contract = DEMO_CONTRACTS[selectedContract];
-  const findings = DEMO_FINDINGS; // Show all findings for demo
+  const findings = liveFindings.length > 0 ? liveFindings : DEMO_FINDINGS;
 
   // Calculate score based on findings
   const criticalCount = findings.filter(f => f.severity === 'critical').length;
   const highCount = findings.filter(f => f.severity === 'high').length;
   const lowCount = findings.filter(f => f.severity === 'low').length;
   const infoCount = findings.filter(f => f.severity === 'info').length;
-  const score = Math.max(0, 100 - criticalCount * 25 - highCount * 10 - lowCount * 3 - infoCount * 0.5);
+  const score = liveScore !== null ? liveScore : Math.max(0, 100 - criticalCount * 25 - highCount * 10 - lowCount * 3 - infoCount * 0.5);
+
+  const handleRunScan = useCallback(async () => {
+    setIsScanning(true);
+    setScanError(null);
+    setLiveFindings([]);
+    setLiveScore(null);
+    setSelectedFinding(null);
+
+    try {
+      const result: ScanResult = await api.demoScan(contract.code);
+      setLiveScore(result.security_score);
+      // Convert API findings to Finding type
+      const converted: Finding[] = result.findings.map((f, i) => ({
+        id: f.id,
+        title: f.title,
+        severity: f.severity as Finding['severity'],
+        line: parseInt(f.location.split(':').pop() || '0'),
+        description: f.description,
+        technicalExplanation: f.explanation,
+        cvss: { score: f.severity === 'critical' ? 9.0 : f.severity === 'high' ? 7.0 : f.severity === 'low' ? 3.0 : 1.0, attackVector: 'network', attackComplexity: 'low', privilegesRequired: 'none', userInteraction: 'none', scope: 'unchanged', impact: { confidentiality: 'none', integrity: 'none', availability: 'none' } },
+        exploitability: 'medium',
+        businessImpact: 'direct-loss',
+        status: 'new',
+        confidence: 'high',
+        attackPath: { steps: [{ step: 1, description: 'Exploit the vulnerability' }], prerequisites: [], expectedOutcome: 'Funds stolen' },
+        poc: { language: 'solidity', code: '// PoC not available in demo mode', setupInstructions: [], expectedOutput: '', runCommand: 'forge test' },
+        remediation: { beforeCode: f.description, afterCode: 'See Pro tier for AI-generated fixes', openZeppelinRefs: [], gasImpact: 'Unknown', testingRecommendations: [], alternativeMitigations: [] },
+        references: [],
+        exploitCode: '',
+        fixSuggestion: f.explanation || 'Upgrade to Pro for AI-powered fix suggestions',
+        learnMore: '',
+      }));
+      setLiveFindings(converted);
+    } catch (err: any) {
+      if (err.message === 'DEMO_MODE') {
+        setScanError('Backend API not available. Running in demo mode with sample data.');
+      } else {
+        setScanError(`Scan failed: ${err.message}`);
+      }
+    } finally {
+      setIsScanning(false);
+    }
+  }, [contract.code]);
 
   const handleFindingClick = (finding: Finding) => {
     setSelectedFinding(finding);
@@ -54,6 +117,31 @@ export default function ScanPage() {
           </select>
         </div>
         <div className="flex items-center gap-3">
+          {/* API status indicator */}
+          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs border ${
+            apiMode === 'live' ? 'bg-green-400/10 border-green-400/30 text-green-400' :
+            apiMode === 'demo' ? 'bg-yellow-400/10 border-yellow-400/30 text-yellow-400' :
+            'bg-card border-border text-muted'
+          }`}>
+            {apiMode === 'checking' ? <Loader2 className="w-3 h-3 animate-spin" /> :
+             apiMode === 'live' ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+            {apiMode === 'live' ? 'Live API' : apiMode === 'demo' ? 'Demo Mode' : 'Checking...'}
+          </div>
+
+          {/* Run Scan button */}
+          <button
+            onClick={handleRunScan}
+            disabled={isScanning}
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              isScanning
+                ? 'bg-info/20 border border-info/30 text-info cursor-wait'
+                : 'bg-info hover:bg-info/90 text-white cursor-pointer'
+            }`}
+          >
+            {isScanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+            {isScanning ? 'Scanning...' : 'Run Scan'}
+          </button>
+
           {/* Sidebar toggle */}
           <button
             onClick={() => setShowSidebar(!showSidebar)}
@@ -64,9 +152,21 @@ export default function ScanPage() {
             <ClipboardList className="w-4 h-4" />
             Audit Tools
           </button>
-          <span className="text-sm text-muted">Interactive audit workstation</span>
         </div>
       </div>
+
+      {/* Scan error/success banner */}
+      {scanError && (
+        <div className="bg-yellow-400/10 border-b border-yellow-400/30 px-6 py-2 flex items-center justify-between">
+          <span className="text-sm text-yellow-400">⚠️ {scanError}</span>
+          <button onClick={() => setScanError(null)} className="text-yellow-400 hover:text-yellow-300 text-sm">✕</button>
+        </div>
+      )}
+      {liveFindings.length > 0 && !scanError && (
+        <div className="bg-green-400/10 border-b border-green-400/30 px-6 py-2">
+          <span className="text-sm text-green-400">✅ Scan complete — {liveFindings.length} findings detected using {apiMode === 'live' ? 'Slither + AI' : 'demo data'}</span>
+        </div>
+      )}
 
       {/* Main Layout */}
       <div className="flex h-[calc(100vh-60px)]">

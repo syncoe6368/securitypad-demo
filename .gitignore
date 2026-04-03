@@ -21,3 +21,6 @@ npm-debug.log*
 
 # Vercel
 .vercel/
+_next/
+*.html
+*.txt

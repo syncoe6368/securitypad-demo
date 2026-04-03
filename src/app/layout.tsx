@@ -9,14 +9,13 @@ export const metadata: Metadata = {
     title: 'SecurityPad — AI Smart Contract Security Auditor',
     description: 'AI-powered smart contract auditing. Catches logic bugs Slither misses, explains them in plain English, generates exploit PoCs.',
     type: 'website',
-    // Use the static OG image generator — no API key needed
-    images: [{ url: '/og', width: 1200, height: 630 }],
+    images: [{ url: '/og-image.png', width: 1200, height: 630, type: 'image/png' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'SecurityPad — AI Smart Contract Security Auditor',
     description: 'AI-powered smart contract security. Find vulnerabilities, generate PoCs, get AI explanations.',
-    images: ['/og'],
+    images: ['/og-image.png'],
   },
   icons: {
     icon: '/favicon.svg',
