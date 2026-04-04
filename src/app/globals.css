@@ -223,3 +223,22 @@ code, .font-mono {
   transform: translateY(-2px);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
+
+/* IDE-specific styles */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Monaco editor overrides */
+.monaco-editor .scroll-decoration {
+  display: none !important;
+}
+
+/* Resize cursor for output panel handle */
+.cursor-ns-resize {
+  cursor: ns-resize;
+}
